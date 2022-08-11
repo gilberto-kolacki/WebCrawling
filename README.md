@@ -1,13 +1,13 @@
 # WebCrawling
 
-###Compilação e execução
+### Compilação e execução
 A partir do diretório raiz do projeto, os seguintes comandos, executados em sequência, devem fazer a
 compilação e execução da aplicação:
 
     docker build . -t axreng/backend
     docker run -e BASE_URL=http://hiring.axreng.com/ -e KEYWORD=four --rm axreng/backend
 
-###Funcionamento
+### Funcionamento
 A interação do usuário com a aplicação é limitada ao fornecimento de argumentos de execução por
 meio de variáveis de ambiente pela linha de comando (ver seções Variáveis de ambiente e Compilação
 e execução, abaixo). As variáveis de ambiente fornecidas determinam a URL base do website em que a
@@ -34,7 +34,7 @@ Pode-se assumir (sem validações específicas por parte da aplicação) que tod
 ser visitadas são formadas por conteúdo HTML válido, e que esse conteúdo não será modificado no
 servidor que hospeda o website durante a execução da aplicação.
 
-###Variáveis de ambiente
+### Variáveis de ambiente
 ● **BASE_URL**: Definição obrigatória. Determina a URL base do website em que a busca deve ser
 feita pela aplicação. Restrições: o valor deve conter uma URL (HTTP ou HTTPS) válida e
 absoluta de acordo com a implementação da classe java.net.URI.
