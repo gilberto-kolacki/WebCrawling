@@ -1,7 +1,5 @@
 package com.axreng.backend.utility;
 
-import com.axreng.backend.Config;
-
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -98,7 +96,7 @@ public class CommonUtils {
         } catch (Exception ex) {
             return false;
         }
-        return "http".equals(url.getProtocol());
+        return SUPPORTED_URI_SCHEMES.contains(url.getProtocol());
     }
 
     public static boolean isValidKEYWORD(String keyword) {
@@ -117,6 +115,14 @@ public class CommonUtils {
         return result;
     }
 
+    public static boolean isAbsoluteUriWithValidScheme(String value) {
+        if (urlMatcher(value)) {
+            absoluteUriWithValidScheme(value);
+            return true;
+        }
+        throw new IllegalArgumentException(String.format("Invalid environment variable BASE_URL: '%1s'", value));
+    }
+
     public static URI absoluteUriWithValidScheme(String value) {
         try {
             URI result = new URI(value);
@@ -129,12 +135,37 @@ public class CommonUtils {
         }
     }
 
-    public static boolean urlValidator(String url) {
+    public static boolean urlMatcher(String url) {
         if (isNull(url)) return false;
-        if (Set.of(".css", ".js", ".gif").contains(url.substring(url.length() - 4))) return false;
-        if (url.contains("../")) return false;
         Matcher matcher = URL_PATTERN.matcher(url);
         return matcher.matches();
+    }
+
+    public static boolean isValidUrl(String url) {
+        try {
+            if (isNull(url)) return false;
+            if (url.contains("../") || url.equals("/")) return false;
+            if (Set.of(".css", ".js", ".gif").contains(url.substring(url.length() - 4))) return false;
+            return true;
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    public static String htmlToJson(String html) {
+        String[] charsToRemove = {"class=", "title=", "target=", "id=", "/"};
+        for (String chars : charsToRemove) {
+            html = html.replace(String.valueOf(chars), "");
+        }
+
+        return html.replaceAll("<a", "{").replaceAll(">", "}")
+                .replaceAll(">", "}")
+                .replaceAll("=", ":")
+                .replaceAll("class", ",\"class\"")
+                .replaceAll("title", ",\"title\"")
+                .replaceAll("href", ",\"href\"")
+                .replaceAll("\"", "\\\"")
+                .replaceFirst(",", "");
     }
 
 }

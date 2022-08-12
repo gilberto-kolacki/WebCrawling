@@ -1,10 +1,16 @@
 package com.axreng.backend.utility;
 
+import org.eclipse.jetty.http.HttpStatus;
+
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
+
+import static java.time.temporal.ChronoUnit.SECONDS;
 
 public class HtmlRetriever {
 
@@ -14,25 +20,24 @@ public class HtmlRetriever {
         this.client = HttpClient.newHttpClient();
     }
 
-    public String retrieve(URI uri) {
+    public String retrieve(String url) {
         try {
-            return tryToRetrieve(uri);
-        } catch (IOException | InterruptedException e) {
-            System.out.println("URL error: ".concat(uri.toString()));
-            System.out.println(e.getMessage());
-            throw new HtmlRetrieverException(e);
+            return tryToRetrieve(url);
+        } catch (IOException | InterruptedException | URISyntaxException e) {
+            return null;
         }
     }
 
-    private String tryToRetrieve(URI uri) throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder(uri).build();
+    private String tryToRetrieve(String url) throws IOException, InterruptedException, URISyntaxException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(new URI(url))
+                .timeout(Duration.of(100, SECONDS))
+                .GET().build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        return response.body();
+        if (HttpStatus.isSuccess(response.statusCode())) {
+            return response.body();
+        }
+        return null;
     }
 
-    public static class HtmlRetrieverException extends RuntimeException {
-        public HtmlRetrieverException(Throwable cause) {
-            super(cause);
-        }
-    }
 }

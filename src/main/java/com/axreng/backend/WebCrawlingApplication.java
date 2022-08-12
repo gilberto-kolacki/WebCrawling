@@ -3,22 +3,21 @@ package com.axreng.backend;
 import com.axreng.backend.model.Link;
 import com.axreng.backend.utility.CommonUtils;
 import com.axreng.backend.utility.HtmlRetriever;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static spark.Spark.stop;
 
 public class WebCrawlingApplication {
 
     private final Config config;
-    private static final Logger LOGGER = LoggerFactory.getLogger(WebCrawlingApplication.class);
     private final List<Link> links = new ArrayList<>();
     private Integer RESULTS_ELEMENTS = 0;
 
@@ -32,64 +31,59 @@ public class WebCrawlingApplication {
 
     public void exec() {
         System.out.println("WebCrawlingApplication initialized");
-        links.add(new Link(this.getConfig().getBaseUrl(), false));
+        Link link = new Link(this.getConfig().getBaseUrl(), false);
+        links.add(link);
         System.out.printf("Search starting with base URL '%1s' and keyword '%2s'%n", config.getBaseUrl(), config.getKeyword());
-        Link link = links.stream().findFirst().orElse(null);
         while (CommonUtils.isNotNull(link) && RESULTS_ELEMENTS < config.getMaxResults()) {
-            this.checkURI(link);
+            this.checkURL(link);
             links.sort(Comparator.comparing(Link::getUrl));
-            link =  links.stream().filter(Link::NotChecked).findFirst().orElse(null);
+            link = links.stream().filter(Link::NotChecked).findFirst().orElse(null);
         }
         System.out.printf("Search finished with '%1s' results found %n", links.stream().filter(Link::isValid).count());
-        stop();
     }
 
-    private void checkURI(Link link) {
+    private void checkURL(Link link) {
+        String html = new HtmlRetriever().retrieve(link.getUrl());
         try {
-            HtmlRetriever retriever = new HtmlRetriever();
-            String xml = retriever.retrieve(CommonUtils.absoluteUriWithValidScheme(link.getUrl()));
-            this.fetchUrls(xml);
-            if(xml.toLowerCase().contains(config.getKeyword().toLowerCase())) {
-                System.out.printf("Result found: %1s %n", link.getUrl());
-                link.setValid(true);
-                RESULTS_ELEMENTS++;
-            }
-            link.setChecked(true);
-        } catch (Exception ex) {
-            System.out.println(ex.getMessage());
-        }
-    }
-
-    private void fetchUrls(String xml) {
-        Scanner xmlScan = new Scanner(xml);
-        while (xmlScan.hasNext()) {
-            String xmlLine = xmlScan.nextLine();
-            if (xmlLine.contains("<a") && xmlLine.contains("href=\"")) {
-                String[] anchorArray = xmlLine.split("href=\"");
-                for (String href : anchorArray) {
-                    String url = this.getAbsoluteUriScheme(config, href.substring(0, href.indexOf("\"")));
-                    if (CommonUtils.isNotNull(url) && links.stream().noneMatch((link) -> link.getUrl().equals(url))) {
-                        links.add(new Link(url, false));
-                    }
+            if (CommonUtils.isNotNull(html) && html.contains("<body")) {
+                html = html.substring(html.indexOf("<body"), html.indexOf("</body>"));
+                this.fetchAnchors(html);
+                if(html.toLowerCase().contains(config.getKeyword().toLowerCase())) {
+                    System.out.printf("Result found: %1s %n", link.getUrl());
+                    link.setValid(true);
+                    RESULTS_ELEMENTS++;
                 }
             }
+        } catch (Exception ex) {
+            System.out.println(html);
+            ex.printStackTrace();
         }
-        xmlScan.close();
+        link.setChecked(true);
     }
 
-    public String getAbsoluteUriScheme(Config config, String url) {
+    private void fetchAnchors(String value) {
+        Pattern linkPattern = Pattern.compile("href=\"(.*?)\"");
+        Matcher linkMatcher = linkPattern.matcher(value);
+        while (linkMatcher.find()) {
+            String url = this.getUrl(linkMatcher.group(1));
+            if (CommonUtils.isNotNull(url) && links.stream().noneMatch((link) -> link.getUrl().equals(url))) {
+                links.add(new Link(url, false));
+            }
+        }
+    }
+
+    public String getUrl(String url) {
         try {
-            URI result = new URI(url);
-            if (!result.isAbsolute()) {
-                result = new URI(config.getBaseUrl().concat(url));
+            if (CommonUtils.isValidUrl(url)) {
+                URI result = new URI(url);
+                if (!result.isAbsolute()) {
+                    result = new URI(config.getBaseUrl().concat(url));
+                }
+                if (CommonUtils.urlMatcher(result.toString()) && config.getBaseUrl().contains(result.getHost())) {
+                    return result.toString();
+                }
             }
-            if (!CommonUtils.SUPPORTED_URI_SCHEMES.contains(result.getScheme())) {
-                result = new URI(config.getScheme().concat(result.toString()));
-            }
-            if (!(CommonUtils.urlValidator(result.toString()) && result.toString().contains(config.getBaseUrl()))) {
-                return null;
-            }
-            return result.toString();
+            return null;
         } catch (URISyntaxException e) {
             return null;
         }

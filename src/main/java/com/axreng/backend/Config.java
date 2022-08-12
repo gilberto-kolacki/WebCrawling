@@ -7,17 +7,13 @@ import static com.axreng.backend.utility.CommonUtils.isNumeric;
 
 public class Config {
 
-
     private static final int DEFAULT_MAX_RESULTS = -1;
-
     private final String baseUrl;
     private final String keyword;
     private final Integer maxResults;
-    private final String scheme;
 
     public Config() {
         this.baseUrl = this.baseUrl();
-        this.scheme = this.scheme();
         this.keyword = this.keyword();
         this.maxResults = this.maxResults();
     }
@@ -43,10 +39,6 @@ public class Config {
         }
     }
 
-    private String scheme() {
-        return CommonUtils.absoluteUriWithValidScheme(this.baseUrl).getScheme();
-    }
-
     private String keyword() {
         String value = System.getenv("KEYWORD");
         if (CommonUtils.isValidKEYWORD(value)) {
@@ -66,7 +58,4 @@ public class Config {
         return DEFAULT_MAX_RESULTS;
     }
 
-    public String getScheme() {
-        return scheme;
-    }
 }
