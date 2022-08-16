@@ -1,6 +1,10 @@
 package com.axreng.backend;
 
+import com.axreng.backend.crawler.WebPage;
 import com.axreng.backend.utility.CommonUtils;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.axreng.backend.utility.CommonUtils.isNotNull;
 import static com.axreng.backend.utility.CommonUtils.isNumeric;
@@ -11,11 +15,21 @@ public class Config {
     private final String baseUrl;
     private final String keyword;
     private final Integer maxResults;
+    private final List<WebPage> links;
+    private static Config instance;
 
-    public Config() {
+    private Config() {
         this.baseUrl = this.baseUrl();
         this.keyword = this.keyword();
         this.maxResults = this.maxResults();
+        this.links = new ArrayList<>();
+    }
+
+    public static Config getInstance() {
+        if (instance == null) {
+            instance = new Config();
+        }
+        return instance;
     }
 
     public String getBaseUrl() {
@@ -56,6 +70,10 @@ public class Config {
             }
         }
         return DEFAULT_MAX_RESULTS;
+    }
+
+    public List<WebPage> getLinks() {
+        return links;
     }
 
 }
